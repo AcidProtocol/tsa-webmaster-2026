@@ -1,198 +1,95 @@
 /* NeuralPath: app.js
-   Renders the dashboard from NP (store.js) and handles theme + toasts. */
-(function () {
-    'use strict';
+   Hash-based single-page view switcher, sidebar progress widget, and reward notifications.
+   Unknown routes fall back to the dashboard, so the portal never shows a 404. */
+(function (NP) {
+  'use strict';
 
-    var $ = function (id) { return document.getElementById(id); };
+  const { icon } = NP.ui;
+  const ROUTES = ['dashboard', 'modules', 'workshop', 'datalab', 'badges', 'about'];
+  let current = { name: null, params: [] };
+  let firstRender = true;
 
-    /* ---- Shared UI (theme, toasts, XP pill) lives in ui.js ----------- */
-    var toast = UI.toast;
-    var announce = UI.announce;
+  function parseHash() {
+    const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+    const name = ROUTES.includes(parts[0]) ? parts[0] : 'dashboard';
+    if (parts[0] && !ROUTES.includes(parts[0])) history.replaceState(null, '', '#/dashboard');
+    return { name, params: parts.slice(1) };
+  }
 
-    /* ---- Rendering --------------------------------------------------- */
-    function el(tag, cls, text) {
-        var n = document.createElement(tag);
-        if (cls) n.className = cls;
-        if (text != null) n.textContent = text;
-        return n;
-    }
+  function renderView({ preserveScroll = false } = {}) {
+    const view = NP.views[current.name];
+    const root = document.getElementById('view');
+    const y = window.scrollY;
+    root.innerHTML = view.render(current.params);
+    if (view.mount) view.mount(root, current.params);
+    NP.ui.hydrate(root);
+    if (preserveScroll) window.scrollTo(0, y);
+  }
 
-    function renderHeader() {
-        var state = NP.load();
-        var lv = NP.level();
-        var pct = Math.round((lv.into / lv.needed) * 100);
+  function navigate() {
+    current = parseHash();
+    const view = NP.views[current.name];
+    document.title = `${view.title} | NeuralPath AI Learning Portal`;
+    document.querySelectorAll('[data-nav]').forEach((a) => {
+      const on = a.dataset.nav === current.name;
+      a.classList.toggle('is-active', on);
+      if (on) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+    const root = document.getElementById('view');
+    root.classList.remove('view-enter');
+    void root.offsetWidth;
+    root.classList.add('view-enter');
+    renderView();
+    window.scrollTo(0, 0);
+    if (!firstRender) document.getElementById('main').focus({ preventScroll: true });
+    firstRender = false;
+  }
 
-        $('xp-total').textContent = state.xp;
-        $('level-num').textContent = lv.level;
-        $('level-ring').style.setProperty('--p', pct);
-        $('level-ring').setAttribute('aria-label', 'Level ' + lv.level + ', ' + pct + ' percent to next level');
-        $('level-note').textContent = (lv.needed - lv.into) + ' XP to level ' + (lv.level + 1);
-    }
+  function renderSidebar() {
+    const lp = NP.store.levelProgress();
+    const tokens = NP.store.triadTokens();
+    document.querySelector('[data-side-xp]').innerHTML = `
+      ${NP.ui.ring({ pct: lp.pct, size: 56, stroke: 6, label: String(lp.level), sub: '' })}
+      <div class="side-xp-text">
+        <span class="side-level">Level ${lp.level}</span>
+        <span class="muted small">${lp.into} / ${lp.size} XP</span>
+      </div>
+      ${tokens > 0 ? `<button class="side-triad" data-open-triad aria-label="${tokens} Triad battle token available">${icon('swords')}<span>${tokens}</span></button>` : ''}`;
+    const triadBtn = document.querySelector('[data-open-triad]');
+    if (triadBtn) triadBtn.addEventListener('click', () => NP.triad.open());
+    NP.ui.refreshIcons();
+  }
 
-    function renderHero() {
-        var next = null;
-        var nextModule = null;
-        NP.MODULES.some(function (m) {
-            var l = NP.nextLesson(m.id);
-            if (l) { next = l; nextModule = m; return true; }
-            return false;
-        });
+  function bindRewards() {
+    NP.bus.on('xp', ({ amount, reason }) => NP.ui.toast({ title: `+${amount} XP`, body: reason, icon: 'zap' }));
+    NP.bus.on('level', ({ level }) => NP.ui.toast({ title: `Level ${level} reached`, body: 'Your neural path is getting stronger.', icon: 'trending-up', tone: 'violet' }));
+    NP.bus.on('badge', (b) => NP.ui.toast({ title: `Badge unlocked: ${b.name}`, body: b.desc, icon: b.icon, tone: 'violet' }));
+    NP.bus.on('triad-unlocked', () => NP.ui.toast({ title: 'Triad Boss Battle unlocked', body: 'Open it from the dashboard or sidebar.', icon: 'swords', tone: 'violet' }));
+    NP.bus.on('change', () => {
+      renderSidebar();
+      const view = NP.views[current.name];
+      if (view && view.live) renderView({ preserveScroll: true });
+    });
+  }
 
-        var btn = $('continue-btn');
-        var any = NP.overall().done > 0;
-        if (!next) {
-            btn.textContent = 'Review the modules';
-            btn.setAttribute('href', 'pages/concepts.html');
-            $('hero-sub').textContent = 'You finished every lesson. Nice work. Review any module to keep the ideas fresh.';
-        } else {
-            btn.textContent = (any ? 'Continue: ' : 'Start: ') + next.title;
-            btn.setAttribute('href', nextModule.page);
-        }
-    }
+  function init() {
+    NP.lesson.init();
+    NP.triad.init();
+    NP.assistant.init();
+    NP.a11y.init();
+    bindRewards();
 
-    function renderTrail() {
-        var trail = $('trail');
-        trail.textContent = '';
-        var classes = ['--concepts', '--tools', '--ethics'];
+    document.getElementById('view').addEventListener('click', (e) => {
+      const lessonBtn = e.target.closest('[data-lesson]');
+      if (lessonBtn) NP.lesson.open(lessonBtn.dataset.lesson);
+    });
 
-        NP.MODULES.forEach(function (m, i) {
-            var p = NP.moduleProgress(m.id);
-            var state = p.done === p.total ? 'done' : p.done > 0 ? 'progress' : 'todo';
-            var li = el('li', 'trail-node');
-            li.setAttribute('data-state', state);
-            li.style.setProperty('--node-color', 'var(' + classes[i] + ')');
-            var dot = el('span', 'trail-dot', state === 'done' ? '✅' : m.icon);
-            dot.setAttribute('aria-hidden', 'true');
-            li.appendChild(dot);
-            li.appendChild(el('span', 'trail-name', m.title));
-            li.appendChild(el('span', 'trail-count', p.done + ' of ' + p.total + ' lessons'));
-            trail.appendChild(li);
-        });
+    window.addEventListener('hashchange', navigate);
+    if (!location.hash) history.replaceState(null, '', '#/dashboard');
+    renderSidebar();
+    navigate();
+  }
 
-        var o = NP.overall();
-        trail.style.setProperty('--pct-num', String(o.pct / 100));
-        $('overall-pct').textContent = o.pct + '%';
-    }
-
-    function renderStats() {
-        var o = NP.overall();
-        var finished = NP.MODULES.filter(function (m) { return NP.moduleDone(m.id); }).length;
-        $('stat-lessons').textContent = o.done;
-        $('stat-modules').textContent = finished + '/' + NP.MODULES.length;
-        $('stat-badges').textContent = NP.load().badges.length;
-
-        var claimed = NP.warmupClaimed();
-        $('warmup-btn').disabled = claimed;
-        $('warmup-note').textContent = claimed ? 'Claimed today. Come back tomorrow.' : '+' + NP.XP_WARMUP + ' XP, once a day';
-    }
-
-    function renderModules() {
-        var grid = $('modules-grid');
-        grid.textContent = '';
-
-        NP.MODULES.forEach(function (m) {
-            var p = NP.moduleProgress(m.id);
-            var card = el('article', 'module-card');
-            card.setAttribute('data-module', m.id);
-
-            var ico = el('div', 'module-ico', m.icon);
-            ico.setAttribute('aria-hidden', 'true');
-            card.appendChild(ico);
-            card.appendChild(el('h3', null, m.title));
-            card.appendChild(el('p', 'module-blurb', m.blurb));
-
-            var prog = el('div', 'progress');
-            var meta = el('div', 'progress-meta');
-            meta.appendChild(el('span', null, p.done + ' of ' + p.total + ' lessons'));
-            meta.appendChild(el('span', null, p.pct + '%'));
-            var bar = el('div', 'bar');
-            bar.setAttribute('role', 'progressbar');
-            bar.setAttribute('aria-label', m.title + ' progress');
-            bar.setAttribute('aria-valuemin', '0');
-            bar.setAttribute('aria-valuemax', '100');
-            bar.setAttribute('aria-valuenow', String(p.pct));
-            var fill = el('div', 'bar-fill');
-            fill.style.width = p.pct + '%';
-            bar.appendChild(fill);
-            prog.appendChild(meta);
-            prog.appendChild(bar);
-            card.appendChild(prog);
-
-            var done = p.done === p.total;
-            var a = el('a', 'btn', done ? 'Review module' : p.done ? 'Continue' : 'Start module');
-            a.setAttribute('href', m.page);
-            a.setAttribute('data-done', String(done));
-            card.appendChild(a);
-
-            grid.appendChild(card);
-        });
-    }
-
-    function renderBadges() {
-        var earned = NP.load().badges;
-        var list = $('badge-grid');
-        list.textContent = '';
-        NP.BADGES.forEach(function (b) {
-            var has = earned.indexOf(b.id) !== -1;
-            var li = el('li', 'badge');
-            li.setAttribute('data-earned', String(has));
-            var ico = el('span', 'badge-ico', b.icon);
-            ico.setAttribute('aria-hidden', 'true');
-            li.appendChild(ico);
-            li.appendChild(el('span', 'badge-name', b.name));
-            li.appendChild(el('span', 'badge-desc', has ? 'Earned' : b.desc));
-            list.appendChild(li);
-        });
-    }
-
-    function renderWorkshop() {
-        var parts = ['ws-predict', 'ws-prep', 'ws-quiz-pass'];
-        var done = parts.filter(function (id) { return NP.activityDone(id); }).length;
-        $('workshop-status').textContent = done + ' of 3 parts complete';
-        $('workshop-btn').textContent = done === 0 ? 'Start workshop' : done === 3 ? 'Review workshop' : 'Continue workshop';
-    }
-
-    function renderAll() {
-        renderHeader();
-        renderWorkshop();
-        renderHero();
-        renderTrail();
-        renderStats();
-        renderModules();
-        renderBadges();
-    }
-
-    /* ---- Events ------------------------------------------------------ */
-    function init() {
-        UI.initTheme();
-
-        $('warmup-btn').addEventListener('click', function () {
-            var r = NP.claimWarmup();
-            if (r.already) { toast('You already claimed today\'s warm-up.'); }
-            else { announce(r, 'daily warm-up'); }
-            renderAll();
-        });
-
-        document.querySelectorAll('[data-demo]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var id = btn.getAttribute('data-demo');
-                var next = NP.nextLesson(id);
-                if (!next) { toast('That module is already finished.'); return; }
-                announce(NP.completeLesson(id, next.id), next.title);
-                renderAll();
-            });
-        });
-
-        $('reset-btn').addEventListener('click', function () {
-            if (window.confirm('Reset all XP, progress, and badges on this device?')) {
-                NP.reset();
-                renderAll();
-                toast('Progress reset.');
-            }
-        });
-
-        renderAll();
-    }
-
-    document.addEventListener('DOMContentLoaded', init);
-})();
+  document.addEventListener('DOMContentLoaded', init);
+})(window.NP = window.NP || {});
