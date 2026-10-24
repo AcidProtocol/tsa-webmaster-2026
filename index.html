@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NeuralPath: Learn AI, Use It Well</title>
+  <meta name="description"
+    content="NeuralPath is a free AI learning portal for high school students. Learn how AI works, try practical tools, and practice ethical use while earning XP and badges.">
+  <meta name="color-scheme" content="light dark">
+
+  <!-- Apply saved/OS theme before first paint to avoid a flash -->
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem('neuralpath.theme');
+        var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', saved || (dark ? 'dark' : 'light'));
+      } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
+    })();
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Lexend:wght@500;600;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <div class="app">
+    <!-- Sidebar (desktop) / bottom tab bar (mobile) -->
+    <aside class="sidebar">
+      <a class="brand" href="index.html" aria-label="NeuralPath home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" width="32" height="32">
+            <circle cx="7" cy="9" r="3.5" />
+            <circle cx="25" cy="9" r="3.5" />
+            <circle cx="16" cy="24" r="3.5" />
+            <path d="M7 9 L25 9 M7 9 L16 24 M25 9 L16 24" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+        </span>
+        <span class="brand-name">NeuralPath</span>
+      </a>
+
+      <nav aria-label="Main">
+        <ul class="nav-list">
+          <li><a class="nav-link" href="index.html" aria-current="page"><span class="nav-ico"
+                aria-hidden="true">🏠</span><span>Dashboard</span></a></li>
+          <li><a class="nav-link" href="pages/workshop.html"><span class="nav-ico"
+                aria-hidden="true">🎓</span><span>Workshop</span></a></li>
+          <li><a class="nav-link" href="pages/concepts.html"><span class="nav-ico"
+                aria-hidden="true">🧠</span><span>Basics</span></a></li>
+          <li><a class="nav-link" href="pages/tools.html"><span class="nav-ico"
+                aria-hidden="true">🛠️</span><span>Tools</span></a></li>
+          <li><a class="nav-link" href="pages/ethics.html"><span class="nav-ico"
+                aria-hidden="true">⚖️</span><span>Ethics</span></a></li>
+          <li><a class="nav-link" href="pages/badges.html"><span class="nav-ico"
+                aria-hidden="true">🏅</span><span>Badges</span></a></li>
+        </ul>
+      </nav>
+
+      <a class="nav-link nav-about" href="pages/about.html"><span class="nav-ico"
+          aria-hidden="true">ℹ️</span><span>About &amp; sources</span></a>
+    </aside>
+
+    <div class="content">
+      <header class="topbar">
+        <h1 class="topbar-title">Dashboard</h1>
+        <div class="topbar-actions">
+          <div class="xp-pill" title="Total experience points">
+            <span aria-hidden="true">⚡</span>
+            <span><strong id="xp-total">0</strong> XP</span>
+          </div>
+          <button class="icon-btn" id="theme-toggle" type="button" aria-label="Switch to dark mode"
+            aria-pressed="false">
+            <span id="theme-ico" aria-hidden="true">🌙</span>
+          </button>
+        </div>
+      </header>
+
+      <main id="main" class="main">
+        <!-- Hero: level + next step -->
+        <section class="hero" aria-labelledby="hero-title">
+          <div class="hero-text">
+            <h2 id="hero-title">Learn how AI works, then use it well.</h2>
+            <p class="hero-sub" id="hero-sub">Three short modules take you from the basics to smart, honest use of AI in
+              school.</p>
+            <a class="btn btn-primary" id="continue-btn" href="pages/concepts.html">Start learning</a>
+          </div>
+
+          <div class="level-card" aria-label="Your level">
+            <div class="level-ring" id="level-ring" role="img" aria-label="Level 1">
+              <div class="level-ring-inner">
+                <span class="level-label">Level</span>
+                <span class="level-num" id="level-num">1</span>
+              </div>
+            </div>
+            <p class="level-note" id="level-note">100 XP to level 2</p>
+          </div>
+        </section>
+
+        <!-- Featured workshop -->
+        <section class="feature" aria-labelledby="feature-title">
+          <div class="feature-text">
+            <h2 id="feature-title">Demystifying AI in Academia</h2>
+            <p>A 60-minute workshop: predict words like an LLM, build a prompt with PREP, and spot made-up citations.
+              Earn XP and three badges along the way.</p>
+            <p class="feature-status" id="workshop-status">0 of 3 parts complete</p>
+          </div>
+          <a class="btn btn-gold" id="workshop-btn" href="pages/workshop.html">Start workshop</a>
+        </section>
+
+        <!-- Learning trail: the signature element -->
+        <section class="panel" aria-labelledby="trail-title">
+          <div class="panel-head">
+            <h2 id="trail-title">Your learning trail</h2>
+            <p class="panel-meta"><span id="overall-pct">0%</span> complete</p>
+          </div>
+          <ol class="trail" id="trail" style="--pct: 0%"></ol>
+        </section>
+
+        <!-- Quick stats -->
+        <section class="stats" aria-label="Quick stats">
+          <div class="stat"><span class="stat-num" id="stat-lessons">0</span><span class="stat-label">lessons
+              done</span></div>
+          <div class="stat"><span class="stat-num" id="stat-modules">0/3</span><span class="stat-label">modules
+              finished</span></div>
+          <div class="stat"><span class="stat-num" id="stat-badges">0</span><span class="stat-label">badges
+              earned</span></div>
+          <div class="stat stat-action">
+            <button class="btn btn-gold" id="warmup-btn" type="button">Claim daily warm-up</button>
+            <span class="stat-label" id="warmup-note">+10 XP, once a day</span>
+          </div>
+        </section>
+
+        <!-- Modules -->
+        <section aria-labelledby="modules-title">
+          <div class="section-head">
+            <h2 id="modules-title">Your modules</h2>
+          </div>
+          <div class="module-grid" id="modules-grid"></div>
+        </section>
+
+        <!-- Badges -->
+        <section aria-labelledby="badges-title">
+          <div class="section-head">
+            <h2 id="badges-title">Badges</h2>
+            <a class="link" href="pages/badges.html">View all</a>
+          </div>
+          <ul class="badge-grid" id="badge-grid"></ul>
+        </section>
+
+        <!-- Demo tools: remove before submission -->
+        <details class="demo">
+          <summary>Demo tools (remove before submission)</summary>
+          <p>Module pages are still being built. Use these to test XP, progress bars, and badges.</p>
+          <div class="demo-row">
+            <button class="btn btn-ghost" type="button" data-demo="concepts">Finish next Foundations lesson</button>
+            <button class="btn btn-ghost" type="button" data-demo="tools">Finish next Tools lesson</button>
+            <button class="btn btn-ghost" type="button" data-demo="ethics">Finish next Ethics lesson</button>
+            <button class="btn btn-ghost" type="button" id="reset-btn">Reset all progress</button>
+          </div>
+        </details>
+      </main>
+    </div>
+  </div>
+
+  <!-- Screen-reader and visual announcements -->
+  <div class="toast-region" id="toast-region" role="status" aria-live="polite"></div>
+
+  <script src="js/store.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+
+</html>

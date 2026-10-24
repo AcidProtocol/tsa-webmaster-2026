@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ethical AI Use — NeuralPath</title>
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <a class="brand" href="../index.html"><span>NeuralPath</span></a>
+            <nav>
+                <ul class="nav-list">
+                    <li><a class="nav-link" href="../index.html">🏠 Dashboard</a></li>
+                    <li><a class="nav-link" href="workshop.html">🎓 Workshop</a></li>
+                    <li><a class="nav-link" href="concepts.html">🧠 Basics</a></li>
+                    <li><a class="nav-link" href="tools.html">🛠️ Tools</a></li>
+                    <li><a class="nav-link" href="ethics.html" aria-current="page">⚖️ Ethics</a></li>
+                    <li><a class="nav-link" href="badges.html">🏅 Badges</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <div class="content">
+            <header class="topbar">
+                <h1>Module 3: Ethical AI Use</h1>
+                <div class="xp-pill"><span>⚡ <strong id="xp-display">0</strong> XP</span></div>
+            </header>
+            <main class="main">
+                <section class="panel">
+                    <h2>Integrity, Bias & Citations</h2>
+                    <p>Understand academic boundaries, attribution standards, and data privacy.</p>
+                    <div style="display: grid; gap: 1rem; margin-top: 1.5rem;" id="lesson-list"></div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="../js/store.js"></script>
+    <script>
+        (function () {
+            var mId = 'ethics';
+            var m = NP.MODULES.find(function (mod) { return mod.id === mId; });
+            var list = document.getElementById('lesson-list');
+            var state = NP.load();
+            var doneList = state.done[mId] || [];
+
+            document.getElementById('xp-display').textContent = state.xp;
+
+            m.lessons.forEach(function (l) {
+                var isDone = doneList.indexOf(l.id) !== -1;
+                var div = document.createElement('div');
+                div.className = 'panel';
+                div.style.display = 'flex';
+                div.style.justifyContent = 'space-between';
+                div.style.alignItems = 'center';
+                div.style.padding = '1rem';
+
+                div.innerHTML = `
+          <div>
+            <strong>${l.title}</strong>
+            <p style="font-size: 0.9rem; color: var(--ink-2); margin-top: 0.2rem;">Explore academic guidelines and ethical case studies.</p>
+          </div>
+          <button class="btn ${isDone ? 'btn-ghost' : 'btn-primary'}" data-lesson="${l.id}">
+            ${isDone ? 'Completed ✅' : 'Complete Lesson (+20 XP)'}
+          </button>
+        `;
+
+                div.querySelector('button').addEventListener('click', function () {
+                    if (!isDone) {
+                        NP.completeLesson(mId, l.id);
+                        location.reload();
+                    }
+                });
+                list.appendChild(div);
+            });
+        })();
+    </script>
+</body>
+
+</html>
